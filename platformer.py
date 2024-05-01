@@ -42,20 +42,20 @@ class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
         # Load in different images for different animations to go through when moving 
-        self.images = [pygame.image.load(f'Images/hero{i}.jpeg').convert_alpha() for i in range(1, 5)]
-        self.image = self.images[0]
+        # self.images = [pygame.image.load(f'Images/hero{i}.jpeg').convert_alpha() for i in range(1, 5)]
+        self.image = pygame.image.load(f'Images/hero1.jpeg')
         self.rect = self.image.get_rect()
         self.movex, self.movey = 0, 0
         self.frame = 0
-
     # Change the position of the player and change which animation they are on
     def update(self):
         self.rect.x += self.movex
         self.rect.y += self.movey
+        self.rect.bottom = self.rect.y + 360
         # If there is any movement, change which frame we are on
-        if self.movex != 0 or self.movey != 0:  
-            self.frame = (self.frame + 1) % len(self.images)
-            self.image = self.images[self.frame]
+        # if self.movex != 0 or self.movey != 0:  
+        #     self.frame = (self.frame + 1) % len(self.images)
+        #     self.image = self.images[self.frame]
 
     # Changes the movement variables based on which keys are pressed 
     def control(self, x, y):
@@ -102,6 +102,9 @@ class Game:
         self.player_list.add(self.player)
 
     def run(self):
+        gravity = 0.01
+        player_velocity = 0
+
         run = True
         while run:
             # Draw Screen
@@ -122,10 +125,8 @@ class Game:
                         self.player.movex = 5
                     elif event.key == pygame.K_UP:
                         # Move up
-                        self.player.movey = -5  
-                    elif event.key == pygame.K_DOWN:
-                        # Move down
-                        self.player.movey = 5  
+                        self.player.movey = -5
+                        # player_velocity = -10
                 elif event.type == pygame.KEYUP:
                     # Making sure that the player only moves when the key is held down and not pressed
                     if event.key == pygame.K_LEFT and self.player.movex < 0:
@@ -134,8 +135,16 @@ class Game:
                         self.player.movex = 0
                     if event.key == pygame.K_UP and self.player.movey < 0:
                         self.player.movey = 0  
-                    elif event.key == pygame.K_DOWN and self.player.movey > 0:
-                        self.player.movey = 0  
+            
+            # Apply gravity
+            player_velocity += gravity
+            self.player.movey += player_velocity
+
+            # Make sure the player does not fall off of the screen
+            if self.player.rect.bottom > 1000:
+                self.player.rect.bottom = 1000 
+                player_velocity = 0
+
 
 
             self.player.update()
