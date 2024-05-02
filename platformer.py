@@ -43,7 +43,7 @@ class Player(pygame.sprite.Sprite):
         super().__init__()
         # Load in different images for different animations to go through when moving 
         # self.images = [pygame.image.load(f'Images/hero{i}.jpeg').convert_alpha() for i in range(1, 5)]
-        self.image = pygame.image.load(f'Images/hero1.jpeg')
+        self.image = pygame.image.load(f'Images/plat.jpeg')
         self.rect = self.image.get_rect()
         self.movex, self.movey = 0, 0
         self.frame = 0
@@ -66,6 +66,7 @@ class Game:
     # Set up screen and make world data along with player and position
     def __init__(self):
         pygame.init()
+        self.clock = pygame.time.Clock()
         self.screen_width = 1000
         self.screen_height = 1000
         self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
@@ -149,6 +150,7 @@ class Game:
 
             self.player.update()
             pygame.display.update()
+            self.clock.tick(30)
         pygame.quit()
 
 if __name__ == "__main__":
