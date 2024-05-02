@@ -1,10 +1,13 @@
 import pygame
 from pygame import *
 
+
+
 # This is the class for the individual boxes/pieces of stone 
 class Box(pygame.sprite.Sprite):
     def __init__(self, x, y, size, image):
         super().__init__()
+        self.box_size = size
         self.image = pygame.transform.scale(image, (size, size))
         self.rect = self.image.get_rect()
         # For Position
@@ -13,10 +16,11 @@ class Box(pygame.sprite.Sprite):
 
 # Handle the many stones/boxes
 class World(pygame.sprite.Group):
-    def __init__(self, data, box_size):
+    def __init__(self, data, box_size, box_array):
         super().__init__()
         self.box_size = box_size
         self.load_images()
+        self.box_array = box_array
         self.create_world(data)
 
     # Loads in the stone images + Goal image
@@ -36,6 +40,8 @@ class World(pygame.sprite.Group):
                     image = self.box_images[box]
                     new_box = Box(col_count * self.box_size, row_count * self.box_size, self.box_size, image)
                     self.add(new_box)
+                    self.box_array.append(new_box)
+                    
 
 
 class Player(pygame.sprite.Sprite):
@@ -66,6 +72,7 @@ class Game:
     # Set up screen and make world data along with player and position
     def __init__(self):
         pygame.init()
+        self.box_array = []
         self.clock = pygame.time.Clock()
         self.screen_width = 1000
         self.screen_height = 1000
@@ -95,7 +102,7 @@ class Game:
  			[1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
  			[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
         ]
-        self.world = World(self.world_data, self.box_size)
+        self.world = World(self.world_data, self.box_size, self.box_array)
         self.player = Player()
         self.player.rect.x = 100  # Starting X position
         self.player.rect.y = 100  # Starting Y position
@@ -123,7 +130,7 @@ class Game:
                         self.player.movex = -5
                     elif event.key == pygame.K_RIGHT:
                         # Move Right
-                        self.player.movex = 5
+                        self.player.movex = 10
                     elif event.key == pygame.K_UP:
                         # Move up
                         self.player.movey = -5
@@ -145,6 +152,11 @@ class Game:
             if self.player.rect.bottom > 1000:
                 self.player.rect.bottom = 1000 
                 player_velocity = 0
+
+            if self.player.rect.collidelist(self.box_array) >= 0:
+                box = self.player.rect.collidelist(self.box_array)
+                self.player.rect.bottom = self.box_array[box].rect.y
+                # self.player.rect.x = self.box_array[box].rect.x + self.box_array[box].box_size
 
 
 
