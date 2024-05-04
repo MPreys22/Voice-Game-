@@ -2,7 +2,6 @@ import pygame
 from pygame import *
 
 
-
 # This is the class for the individual boxes/pieces of stone 
 class Box(pygame.sprite.Sprite):
     def __init__(self, x, y, size, image):
@@ -16,11 +15,10 @@ class Box(pygame.sprite.Sprite):
 
 # Handle the many stones/boxes
 class World(pygame.sprite.Group):
-    def __init__(self, data, box_size, box_array):
+    def __init__(self, data, box_size):
         super().__init__()
         self.box_size = box_size
         self.load_images()
-        self.box_array = box_array
         self.create_world(data)
 
     # Loads in the stone images + Goal image
@@ -40,28 +38,44 @@ class World(pygame.sprite.Group):
                     image = self.box_images[box]
                     new_box = Box(col_count * self.box_size, row_count * self.box_size, self.box_size, image)
                     self.add(new_box)
-                    self.box_array.append(new_box)
                     
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, posx, posy, gravity):
         super().__init__()
-        # Load in different images for different animations to go through when moving 
-        # self.images = [pygame.image.load(f'Images/hero{i}.jpeg').convert_alpha() for i in range(1, 5)]
+        # Initialize the important variables
         self.image = pygame.image.load(f'Images/plat.jpeg')
         self.rect = self.image.get_rect()
+        self.gravity = gravity
+        self.rect.x = posx
+        self.rect.y = posy
         self.movex, self.movey = 0, 0
-        self.frame = 0
-    # Change the position of the player and change which animation they are on
-    def update(self):
+        self.on_ground = False
+    # Change the position of the player and check for collisions and make sure gravity is applied
+    def update(self, world):
         self.rect.x += self.movex
         self.rect.y += self.movey
-        self.rect.bottom = self.rect.y + 360
-        # If there is any movement, change which frame we are on
-        # if self.movex != 0 or self.movey != 0:  
-        #     self.frame = (self.frame + 1) % len(self.images)
-        #     self.image = self.images[self.frame]
+        self.apply_gravity()
+        self.check_collisions(world)
+    
+    def apply_gravity(self):
+        if not self.on_ground:
+            self.movey += self.gravity
+            # max falling speed
+            if self.movey > 10:  
+                self.movey = 10
+
+    def check_collisions(self, world):
+        # Reset to check if the player is on the ground 
+        self.on_ground = False
+        # Check for collisions after moving
+        hits = pygame.sprite.spritecollide(self, world, False)
+        for hit in hits:
+            if self.movey > 0:
+                self.rect.bottom = hit.rect.top
+                self.movey = 0
+                self.on_ground = True
 
     # Changes the movement variables based on which keys are pressed 
     def control(self, x, y):
@@ -72,7 +86,7 @@ class Game:
     # Set up screen and make world data along with player and position
     def __init__(self):
         pygame.init()
-        self.box_array = []
+        gravity = 0.5
         self.clock = pygame.time.Clock()
         self.screen_width = 1000
         self.screen_height = 1000
@@ -102,65 +116,38 @@ class Game:
  			[1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
  			[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
         ]
-        self.world = World(self.world_data, self.box_size, self.box_array)
-        self.player = Player()
-        self.player.rect.x = 100  # Starting X position
-        self.player.rect.y = 100  # Starting Y position
+        self.world = World(self.world_data, self.box_size)
+        self.player = Player(100, 900, gravity)
         self.player_list = pygame.sprite.Group()
         self.player_list.add(self.player)
 
     def run(self):
-        gravity = 0.01
-        player_velocity = 0
 
         run = True
         while run:
-            # Draw Screen
-            self.screen.blit(self.background, (0, 0))
-            self.world.draw(self.screen)
-            self.player_list.draw(self.screen)
-            
             # Key Press events
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     run = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_LEFT:
-                        # Move Left
-                        self.player.movex = -5
+                        self.player.control(-5, 0)
                     elif event.key == pygame.K_RIGHT:
-                        # Move Right
-                        self.player.movex = 10
-                    elif event.key == pygame.K_UP:
-                        # Move up
-                        self.player.movey = -5
-                        # player_velocity = -10
+                        self.player.control(5, 0)
+                        # Dont let player double jump
+                    elif event.key == pygame.K_UP and self.player.on_ground:
+                        self.player.movey = -10
+                        self.player.on_ground = False
+                        # Move left/right midair
                 elif event.type == pygame.KEYUP:
-                    # Making sure that the player only moves when the key is held down and not pressed
-                    if event.key == pygame.K_LEFT and self.player.movex < 0:
-                        self.player.movex = 0
-                    elif event.key == pygame.K_RIGHT and self.player.movex > 0:
-                        self.player.movex = 0
-                    if event.key == pygame.K_UP and self.player.movey < 0:
-                        self.player.movey = 0  
-            
-            # Apply gravity
-            player_velocity += gravity
-            self.player.movey += player_velocity
+                    if event.key in [pygame.K_LEFT, pygame.K_RIGHT]:
+                        self.player.control(-self.player.movex, 0)
 
-            # Make sure the player does not fall off of the screen
-            if self.player.rect.bottom > 1000:
-                self.player.rect.bottom = 1000 
-                player_velocity = 0
-
-            if self.player.rect.collidelist(self.box_array) >= 0:
-                box = self.player.rect.collidelist(self.box_array)
-                self.player.rect.bottom = self.box_array[box].rect.y
-                # self.player.rect.x = self.box_array[box].rect.x + self.box_array[box].box_size
-
-
-
-            self.player.update()
+            self.player.update(self.world)
+            # Draw Screen
+            self.screen.blit(self.background, (0, 0))
+            self.world.draw(self.screen)
+            self.player_list.draw(self.screen)
             pygame.display.update()
             self.clock.tick(30)
         pygame.quit()
