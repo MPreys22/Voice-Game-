@@ -1,5 +1,7 @@
 import pygame
 from pygame import *
+from voicegame import get_average_rms
+import subprocess 
 
 
 # This is the class for the individual boxes/pieces of stone 
@@ -51,7 +53,7 @@ class Player(pygame.sprite.Sprite):
         self.rect.x = posx
         self.rect.y = posy
         self.movex, self.movey = 0, 0
-        self.on_ground = False
+        self.on_ground = True
     # Change the position of the player and check for collisions and make sure gravity is applied
     def update(self, world):
         self.rect.x += self.movex
@@ -67,13 +69,15 @@ class Player(pygame.sprite.Sprite):
                 self.movey = 10
 
     def check_collisions(self, world):
-        # Reset to check if the player is on the ground 
-        self.on_ground = False
+        # # Reset to check if the player is on the ground 
+        # self.on_ground = False
         # Check for collisions after moving
         hits = pygame.sprite.spritecollide(self, world, False)
         for hit in hits:
+            if self.rect.x > hit.rect.x or self.rect.x < hit.rect.x: 
+                self.movex = 0
             if self.movey > 0:
-                self.rect.bottom = hit.rect.top
+                self.rect.bottom = hit.rect.top                
                 self.movey = 0
                 self.on_ground = True
 
@@ -120,8 +124,10 @@ class Game:
         self.player = Player(100, 900, gravity)
         self.player_list = pygame.sprite.Group()
         self.player_list.add(self.player)
+    
 
     def run(self):
+        voice_process = subprocess.Popen(['python', 'voicegame.py'])
 
         run = True
         while run:
@@ -131,9 +137,11 @@ class Game:
                     run = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_LEFT:
-                        self.player.control(-5, 0)
+                        self.player.control(-get_average_rms()* 5000, 0)
+                        print("Current average RMS in game:", get_average_rms())
                     elif event.key == pygame.K_RIGHT:
-                        self.player.control(5, 0)
+                        self.player.control(get_average_rms() * 5000, 0)
+                        print("Current average RMS in game:", get_average_rms())
                         # Dont let player double jump
                     elif event.key == pygame.K_UP and self.player.on_ground:
                         self.player.movey = -10

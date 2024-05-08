@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sounddevice as sd
 
+average_rms = 0
+
 
 def int_or_str(text):
     """Helper function for argument parsing."""
@@ -66,25 +68,35 @@ def audio_callback(indata, frames, time, status):
     q.put(indata[::args.downsample, mapping])
 
 
+
+
+import numpy as np
+
 def update_plot(frame):
-    """This is called by matplotlib for each plot update.
-
-    Typically, audio callbacks happen more frequently than plot updates,
-    therefore the queue tends to contain multiple blocks of audio data.
-
-    """
-    global plotdata
+    global plotdata, average_rms
+    rms_values = []
     while True:
+        # Get voice data from queue
         try:
             data = q.get_nowait()
         except queue.Empty:
             break
-        shift = len(data)
-        plotdata = np.roll(plotdata, -shift, axis=0)
-        plotdata[-shift:, :] = data
-    for column, line in enumerate(lines):
-        line.set_ydata(plotdata[:, column])
+        # Calc amplitude
+        if data.size > 0:
+            rms = np.sqrt(np.mean(data**2))
+            rms_values.append(rms)
+
+    if rms_values:
+        average_rms = np.mean(rms_values)
+        # print("RMS updated to: {average_rms}")
     return lines
+
+
+def get_average_rms():
+    # Make average rms variable accesible everywhere
+    global average_rms
+    print(average_rms)
+    return average_rms
 
 
 try:
