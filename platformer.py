@@ -1,6 +1,6 @@
 import pygame
 from pygame import *
-from voicegame import get_average_rms
+from voicegame import AudioVisualizer as audio
 import subprocess 
 
 
@@ -47,7 +47,7 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, posx, posy, gravity):
         super().__init__()
         # Initialize the important variables
-        self.image = pygame.image.load(f'Images/plat.jpeg')
+        self.image = pygame.image.load(f'Images/hero1.png')
         self.rect = self.image.get_rect()
         self.gravity = gravity
         self.rect.x = posx
@@ -64,22 +64,40 @@ class Player(pygame.sprite.Sprite):
     def apply_gravity(self):
         if not self.on_ground:
             self.movey += self.gravity
-            # max falling speed
+            # Max falling speed
             if self.movey > 10:  
                 self.movey = 10
 
     def check_collisions(self, world):
-        # # Reset to check if the player is on the ground 
-        # self.on_ground = False
-        # Check for collisions after moving
+        # Horizontal collision
+        self.rect.x += self.movex
         hits = pygame.sprite.spritecollide(self, world, False)
         for hit in hits:
-            if self.rect.x > hit.rect.x or self.rect.x < hit.rect.x: 
-                self.movex = 0
-            if self.movey > 0:
-                self.rect.bottom = hit.rect.top                
+            # Coming from the left of the block
+            if self.movex > 0:  
+                self.rect.right = hit.rect.left
+            # Coming from the right of the block
+            elif self.movex < 0:  
+                self.rect.left = hit.rect.right
+            self.movex = 0
+
+        # Vertical collision
+        self.rect.y += self.movey
+        hits = pygame.sprite.spritecollide(self, world, False)
+        for hit in hits:
+            # Player cannot fall through Block
+            if self.movey > 0:  
+                self.rect.bottom = hit.rect.top
                 self.movey = 0
                 self.on_ground = True
+            # So Player cannot come up through block from underneath
+            elif self.movey < 0:  
+                self.rect.top = hit.rect.bottom
+                self.movey = 0  
+
+        # Apply gravity so character will not float on air when after walking off a platform
+        if not hits:
+            self.on_ground = False
 
     # Changes the movement variables based on which keys are pressed 
     def control(self, x, y):
@@ -101,21 +119,21 @@ class Game:
         self.world_data = [
             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
  			[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-			[1, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 1], 
- 			[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 1, 1, 1], 
- 			[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 7, 0, 5, 0, 0, 0, 1], 
- 			[1, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1], 
- 			[1, 7, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+			[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+ 			[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1], 
+ 			[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1], 
+ 			[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1], 
+ 			[1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
  			[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
- 			[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 7, 0, 0, 0, 0, 1], 
- 			[1, 0, 1, 0, 0, 7, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
- 			[1, 0, 0, 1, 0, 0, 4, 0, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 1], 
+ 			[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+ 			[1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+ 			[1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
  			[1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1], 
  			[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
- 			[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 7, 0, 0, 0, 0, 1, 0, 1], 
+ 			[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1], 
  			[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
  			[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1], 
- 			[1, 0, 0, 0, 0, 0, 1, 1, 1, 6, 6, 6, 6, 6, 1, 1, 1, 1, 1, 1], 
+ 			[1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1], 
  			[1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
  			[1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
  			[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
@@ -124,24 +142,23 @@ class Game:
         self.player = Player(100, 900, gravity)
         self.player_list = pygame.sprite.Group()
         self.player_list.add(self.player)
+        self.voice_process = subprocess.Popen(['python', 'voicegame.py'], stdout=subprocess.PIPE, text=True)
     
 
     def run(self):
-        voice_process = subprocess.Popen(['python', 'voicegame.py'])
 
         run = True
         while run:
-            # Key Press events
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     run = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_LEFT:
-                        self.player.control(-get_average_rms()* 5000, 0)
-                        print("Current average RMS in game:", get_average_rms())
+                        self.player.control(-average_rms* 500, 0)
+                        print("Current average RMS in game:", average_rms)
                     elif event.key == pygame.K_RIGHT:
-                        self.player.control(get_average_rms() * 5000, 0)
-                        print("Current average RMS in game:", get_average_rms())
+                        self.player.control(average_rms * 500, 0)
+                        print("Current average RMS in game:", average_rms)
                         # Dont let player double jump
                     elif event.key == pygame.K_UP and self.player.on_ground:
                         self.player.movey = -10
@@ -151,6 +168,13 @@ class Game:
                     if event.key in [pygame.K_LEFT, pygame.K_RIGHT]:
                         self.player.control(-self.player.movex, 0)
 
+            # This is ChatGPT 
+            output = self.voice_process.stdout.readline()  # This blocks until a line is available
+            if output:
+                average_rms = float(output.strip())
+                # print("Current average RMS in game:", average_rms)
+            # End of ChatGPT
+
             self.player.update(self.world)
             # Draw Screen
             self.screen.blit(self.background, (0, 0))
@@ -158,6 +182,7 @@ class Game:
             self.player_list.draw(self.screen)
             pygame.display.update()
             self.clock.tick(30)
+        self.voice_process.terminate()
         pygame.quit()
 
 if __name__ == "__main__":
